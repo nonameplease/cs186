@@ -132,7 +132,7 @@ class LeafNode extends BPlusNode {
   @Override
   public LeafNode get(DataBox key) {
     //Question 3
-    return getLeftmostLeaf();
+    return this;
   }
 
   // See BPlusNode.getLeftmostLeaf.
@@ -145,8 +145,49 @@ class LeafNode extends BPlusNode {
   // See BPlusNode.put.
   @Override
   public Optional<Pair<DataBox, Integer>> put(DataBox key, RecordId rid)
+    //Question 3
       throws BPlusTreeException {
-    throw new UnsupportedOperationException("TODO(hw2): implement.");
+      //Check duplicate key
+      if (keys.contains(key)) {
+          throw new BPlusTreeException("Duplicate key is not allowed !");
+      }
+
+      Optional<Pair<DataBox, Integer>> newpair = Optional.empty();
+      //max entries a LeafNode can contains
+      int maxnum = metadata.getOrder() * 2;
+      //current number of entries in the LeafNode
+      int num = keys.size();
+
+      //Insert key and rid at appropriate position
+      if (key.getInt() < keys.get(0).getInt()) {
+          keys.add(0, key);
+          rids.add(0, rid);
+      } else {
+          for (int i = 0; i <= num; i++) {
+              if (key.getInt() > keys.get(i).getInt()) {
+                  keys.add(i + 1, key);
+                  rids.add(i + 1, rid);
+                  break;
+              }
+          }
+      }
+
+      //update current number of entries in the LeafNode
+      num = keys.size();
+
+      //Check overfill and split if necessary
+      if (num >= maxnum) {
+          int newindex = maxnum / 2 + 1;
+          List<DataBox> newkeys = keys.subList(newindex, num + 1);
+          List<RecordId> newrids = rids.subList(newindex, num + 1);
+          LeafNode newLeafNode = new LeafNode(metadata, newkeys, newrids, Optional.empty());
+          keys = keys.subList(0, newindex);
+          rids = rids.subList(0, newindex);
+          rightSibling = Optional.of(newLeafNode.getPage().getPageNum());
+          newpair = Optional.of(new Pair<>(newkeys.get(0), newLeafNode.getPage().getPageNum()));
+      }
+      sync();
+      return newpair;
   }
 
   // See BPlusNode.bulkLoad.
