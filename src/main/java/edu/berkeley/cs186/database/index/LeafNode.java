@@ -1,17 +1,16 @@
 package edu.berkeley.cs186.database.index;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
+import edu.berkeley.cs186.database.Database;
 import edu.berkeley.cs186.database.common.Pair;
 import edu.berkeley.cs186.database.databox.DataBox;
 import edu.berkeley.cs186.database.databox.Type;
 import edu.berkeley.cs186.database.io.Page;
 import edu.berkeley.cs186.database.table.RecordId;
+
+import javax.xml.crypto.Data;
 
 /**
  * A leaf of a B+ tree. Every leaf in a B+ tree of order d stores between d and
@@ -132,13 +131,15 @@ class LeafNode extends BPlusNode {
   // See BPlusNode.get.
   @Override
   public LeafNode get(DataBox key) {
-    throw new UnsupportedOperationException("TODO(hw2): implement.");
+    //Question 3
+    return getLeftmostLeaf();
   }
 
   // See BPlusNode.getLeftmostLeaf.
   @Override
   public LeafNode getLeftmostLeaf() {
-    throw new UnsupportedOperationException("TODO(hw2): implement.");
+    //Question 3
+    return this;
   }
 
   // See BPlusNode.put.
@@ -335,7 +336,30 @@ class LeafNode extends BPlusNode {
    * meta.getAllocator().
    */
   public static LeafNode fromBytes(BPlusTreeMetadata metadata, int pageNum) {
-    throw new UnsupportedOperationException("TODO(hw2): implement.");
+    //Question 2
+    Page page = metadata.getAllocator().fetchPage(pageNum);
+    ByteBuffer buf = page.getByteBuffer();
+
+    //Make sure it is a leafNode
+    assert(buf.get() == (byte) 1);
+
+    //Initialization
+    Optional<Integer> rightSibling = Optional.empty();
+    List<DataBox> keys = new ArrayList<>();
+    List<RecordId> rids = new ArrayList<>();
+
+    //Read data
+    int temp = buf.getInt();
+    if (temp != -1){
+      rightSibling = Optional.of(temp);
+    }
+    int n = buf.getInt();
+    for (int i = 0; i < n + 1; ++i) {
+      keys.add(DataBox.fromBytes(buf, metadata.getKeySchema()));
+      rids.add(RecordId.fromBytes(buf));
+    }
+
+    return new LeafNode(metadata, pageNum, keys, rids, rightSibling);
   }
 
   // Builtins //////////////////////////////////////////////////////////////////
