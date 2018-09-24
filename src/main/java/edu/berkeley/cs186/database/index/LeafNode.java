@@ -195,13 +195,22 @@ class LeafNode extends BPlusNode {
   public Optional<Pair<DataBox, Integer>> bulkLoad(Iterator<Pair<DataBox, RecordId>> data,
                                                    float fillFactor)
       throws BPlusTreeException {
+    int loadlimit = (int) Math.ceil(metadata.getOrder() * 2 * fillFactor);
+    while (data.hasNext()) {
+      Pair<DataBox, RecordId> datapair = data.next();
+
+    }
     throw new UnsupportedOperationException("TODO(hw2): implement.");
   }
 
   // See BPlusNode.remove.
   @Override
   public void remove(DataBox key) {
-    throw new UnsupportedOperationException("TODO(hw2): implement.");
+    if (keys.contains(key)) {
+      int position = keys.indexOf(key);
+      keys.remove(key);
+      rids.remove(position);
+    }
   }
 
   // Iterators /////////////////////////////////////////////////////////////////
