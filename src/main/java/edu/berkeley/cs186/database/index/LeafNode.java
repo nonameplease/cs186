@@ -159,14 +159,17 @@ class LeafNode extends BPlusNode {
       int num = keys.size();
 
       //Insert key and rid at appropriate position
-      if (key.getInt() < keys.get(0).getInt()) {
-          keys.add(0, key);
-          rids.add(0, rid);
+      if (num == 0) {
+        keys.add(key);
+        rids.add(rid);
+      } else if (key.getInt() > keys.get(num - 1).getInt()) {
+          keys.add(key);
+          rids.add(rid);
       } else {
-          for (int i = 0; i <= num; i++) {
-              if (key.getInt() > keys.get(i).getInt()) {
-                  keys.add(i + 1, key);
-                  rids.add(i + 1, rid);
+          for (int i = 0; i < num; i++) {
+              if (key.getInt() < keys.get(i).getInt()) {
+                  keys.add(i, key);
+                  rids.add(i, rid);
                   break;
               }
           }
@@ -176,15 +179,16 @@ class LeafNode extends BPlusNode {
       num = keys.size();
 
       //Check overfill and split if necessary
-      if (num >= maxnum) {
+      if (num > maxnum) {
           int newindex = maxnum / 2 + 1;
-          List<DataBox> newkeys = keys.subList(newindex, num + 1);
-          List<RecordId> newrids = rids.subList(newindex, num + 1);
-          LeafNode newLeafNode = new LeafNode(metadata, newkeys, newrids, Optional.empty());
+          List<DataBox> newkeys = keys.subList(newindex, num);
+          List<RecordId> newrids = rids.subList(newindex, num);
+          Optional<Integer> currentrightsibling = rightSibling;
+          LeafNode newLeafNode = new LeafNode(metadata, newkeys, newrids, currentrightsibling);
           keys = keys.subList(0, newindex);
           rids = rids.subList(0, newindex);
           rightSibling = Optional.of(newLeafNode.getPage().getPageNum());
-          newpair = Optional.of(new Pair<>(newkeys.get(0), newLeafNode.getPage().getPageNum()));
+          newpair = Optional.of(new Pair<>(newLeafNode.keys.get(0), newLeafNode.getPage().getPageNum()));
       }
       sync();
       return newpair;
@@ -195,12 +199,33 @@ class LeafNode extends BPlusNode {
   public Optional<Pair<DataBox, Integer>> bulkLoad(Iterator<Pair<DataBox, RecordId>> data,
                                                    float fillFactor)
       throws BPlusTreeException {
+    boolean overflown = false;
+    Optional<Pair<DataBox, Integer>> newpair = Optional.empty();
     int loadlimit = (int) Math.ceil(metadata.getOrder() * 2 * fillFactor);
+    LeafNode rootLeafNode = this;
+    LeafNode currentNode = rootLeafNode;
     while (data.hasNext()) {
-      Pair<DataBox, RecordId> datapair = data.next();
-
+      for (int i = 0; i < loadlimit; i++) {
+        if (data.hasNext()) {
+          Pair<DataBox, RecordId> datapair = data.next();
+          currentNode.keys.add(datapair.getFirst());
+          currentNode.rids.add(datapair.getSecond());
+        }
+      }
+      if (data.hasNext()) {
+        overflown = true;
+        List<DataBox> silbnewkeys = new ArrayList<>();
+        List<RecordId> silbnewrids = new ArrayList<>();
+        LeafNode silbLeafNode = new LeafNode(metadata, silbnewkeys, silbnewrids, Optional.empty());
+        currentNode.rightSibling = Optional.of(silbLeafNode.getPage().getPageNum());
+        currentNode = silbLeafNode;
+      }
     }
-    throw new UnsupportedOperationException("TODO(hw2): implement.");
+    if (overflown) {
+      newpair = Optional.of(new Pair<>(rootLeafNode.keys.get(0), rootLeafNode.getPage().getPageNum()));
+    }
+    sync();
+    return newpair;
   }
 
   // See BPlusNode.remove.
@@ -211,6 +236,7 @@ class LeafNode extends BPlusNode {
       keys.remove(key);
       rids.remove(position);
     }
+    sync();
   }
 
   // Iterators /////////////////////////////////////////////////////////////////
@@ -404,9 +430,11 @@ class LeafNode extends BPlusNode {
       rightSibling = Optional.of(temp);
     }
     int n = buf.getInt();
-    for (int i = 0; i < n + 1; ++i) {
-      keys.add(DataBox.fromBytes(buf, metadata.getKeySchema()));
-      rids.add(RecordId.fromBytes(buf));
+    if (n != 0) {
+      for (int i = 0; i < n; i++) {
+        keys.add(DataBox.fromBytes(buf, metadata.getKeySchema()));
+        rids.add(RecordId.fromBytes(buf));
+      }
     }
 
     return new LeafNode(metadata, pageNum, keys, rids, rightSibling);
