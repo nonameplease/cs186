@@ -135,6 +135,10 @@ class InnerNode extends BPlusNode {
   public Optional<Pair<DataBox, Integer>> bulkLoad(Iterator<Pair<DataBox, RecordId>> data,
                                                    float fillFactor)
       throws BPlusTreeException {
+    Optional<Pair<DataBox, Integer>> newpair = Optional.empty();
+    while (data.hasNext()) {
+      newpair = LeafNode.fromBytes(metadata, children.get(keys.size())).bulkLoad(data, fillFactor);
+    }
     throw new UnsupportedOperationException("TODO(hw2): implement.");
   }
 
