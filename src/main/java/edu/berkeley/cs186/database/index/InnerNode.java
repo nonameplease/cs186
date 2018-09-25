@@ -96,7 +96,7 @@ class InnerNode extends BPlusNode {
     Optional<Pair<DataBox, Integer>> newpair = Optional.empty();
     int newinnernodeposition = -1;
     if (key.getInt() >= keys.get(keys.size() - 1).getInt()) {
-      newpair = LeafNode.fromBytes(metadata, children.get(keys.size() -1)).put(key, rid);
+      newpair = LeafNode.fromBytes(metadata, children.get(keys.size())).put(key, rid);
       if (!newpair.equals(Optional.empty())) {
         newinnernodeposition = keys.size();
       }
@@ -108,24 +108,25 @@ class InnerNode extends BPlusNode {
           if (!newpair.equals(Optional.empty())) {
             newinnernodeposition = i;
           }
+          break;
         }
       }
     }
-
-    if (newinnernodeposition != -1) {
+    if (!newpair.equals(Optional.empty())) {
       keys.add(newinnernodeposition, newpair.get().getFirst());
       children.add(newinnernodeposition, newpair.get().getSecond());
-      List<DataBox> rightinnerkeys = keys.subList(keys.size() - metadata.getOrder(), keys.size());
-      List<Integer> rightinnerchildren = children.subList(keys.size() - metadata.getOrder(), keys.size());
-      InnerNode rightinnernode = new InnerNode(metadata, rightinnerkeys, rightinnerchildren);
-      List<DataBox> upinnerkeys = keys.subList(metadata.getOrder(), metadata.getOrder() + 1);
-      List<Integer> upinnerchildren = children.subList(this.page.getPageNum(), rightinnernode.page.getPageNum());
-      keys = keys.subList(0, metadata.getOrder());
-      children = children.subList(0, metadata.getOrder());
-      //???
-      InnerNode upinnernode = new InnerNode(metadata, upinnerkeys, upinnerchildren);
-      newpair = Optional.of(new Pair<>(upinnerkeys.get(0), upinnernode.page.getPageNum()));
+      if (keys.size() > metadata.getOrder() * 2 + 1) {
+        List<DataBox> rightinnerkeys = keys.subList(keys.size() - metadata.getOrder(), keys.size());
+        List<Integer> rightinnerchildren = children.subList(keys.size() - metadata.getOrder(), keys.size());
+        InnerNode rightinnernode = new InnerNode(metadata, rightinnerkeys, rightinnerchildren);
+        List<DataBox> upinnerkeys = keys.subList(metadata.getOrder(), metadata.getOrder() + 1);
+        List<Integer> upinnerchildren = children.subList(this.page.getPageNum(), rightinnernode.page.getPageNum());
+        keys = keys.subList(0, metadata.getOrder());
+        children = children.subList(0, metadata.getOrder());
+        newpair = Optional.of(new Pair<>(upinnerkeys.get(0), rightinnernode.page.getPageNum()));
+      }
     }
+    sync();
     return newpair;
   }
 
@@ -140,7 +141,16 @@ class InnerNode extends BPlusNode {
   // See BPlusNode.remove.
   @Override
   public void remove(DataBox key) {
-    throw new UnsupportedOperationException("TODO(hw2): implement.");
+    if (key.getInt() >= keys.get(keys.size() - 1).getInt()) {
+      LeafNode.fromBytes(metadata, children.get(keys.size())).remove(key);
+    } else {
+      for (int i = 0; i < keys.size(); i++) {
+        if (key.getInt() < keys.get(i).getInt()) {
+          LeafNode.fromBytes(metadata, children.get(i)).remove(key);
+          break;
+        }
+      }
+    }
   }
 
   // Helpers ///////////////////////////////////////////////////////////////////
