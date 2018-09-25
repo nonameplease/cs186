@@ -15,6 +15,7 @@ import edu.berkeley.cs186.database.databox.DataBox;
 import edu.berkeley.cs186.database.databox.Type;
 import edu.berkeley.cs186.database.io.Page;
 import edu.berkeley.cs186.database.io.PageAllocator;
+import edu.berkeley.cs186.database.table.Record;
 import edu.berkeley.cs186.database.table.RecordId;
 
 /**
@@ -157,7 +158,8 @@ public class BPlusTree {
     public Optional<RecordId> get(DataBox key) {
         //Question 4
       typecheck(key);
-      throw new UnsupportedOperationException("TODO(hw2): implement.");
+      Optional<RecordId> returnedID = Optional.empty();
+      return root.get(key).getKey(key);
     }
 
     /**
@@ -205,8 +207,8 @@ public class BPlusTree {
      * memory will receive 0 points.
      */
     public Iterator<RecordId> scanAll() {
-      throw new UnsupportedOperationException("TODO(hw2): implement.");
-      // TODO(hw2): Return a BPlusTreeIterator.
+        //Question 4
+        return new BPlusTreeIterator();
     }
 
     /**
@@ -234,9 +236,10 @@ public class BPlusTree {
      * memory will receive 0 points.
      */
     public Iterator<RecordId> scanGreaterEqual(DataBox key) {
+        //Question 4
       typecheck(key);
-      throw new UnsupportedOperationException("TODO(hw2): implement.");
-      // TODO(hw2): Return a BPlusTreeIterator.
+      LeafNode rootLeafNote = root.get(key);
+      return new BPlusTreeIterator(rootLeafNote, rootLeafNote.scanGreaterEqual(key));
     }
 
     /**
@@ -353,16 +356,41 @@ public class BPlusTree {
 
     // Iterator ////////////////////////////////////////////////////////////////
     private class BPlusTreeIterator implements Iterator<RecordId> {
+        //Question 4
       // TODO(hw2): Add whatever fields and constructors you want here.
 
       @Override
       public boolean hasNext() {
-        throw new UnsupportedOperationException("TODO(hw2): implement.");
+          return recordIdIterator.hasNext() || leafNode.getRightSibling().isPresent();
       }
 
       @Override
       public RecordId next() {
-        throw new UnsupportedOperationException("TODO(hw2): implement.");
+          if (recordIdIterator.hasNext()) {
+              return recordIdIterator.next();
+          } else {
+              leafNode = leafNode.getRightSibling().get();
+              recordIdIterator = leafNode.scanAll();
+              return next();
+          }
       }
+
+      private Iterator<RecordId> recordIdIterator;
+      private LeafNode leafNode;
+
+      public BPlusTreeIterator() {
+          this(root.getLeftmostLeaf(), null);
+      }
+
+      public BPlusTreeIterator(LeafNode leafNode, Iterator<RecordId> recordIdIterator) {
+          this.leafNode = leafNode;
+          if (recordIdIterator == null) {
+              this.recordIdIterator = leafNode.scanAll();
+          } else {
+              this.recordIdIterator = recordIdIterator;
+          }
+      }
+
+
     }
 }
