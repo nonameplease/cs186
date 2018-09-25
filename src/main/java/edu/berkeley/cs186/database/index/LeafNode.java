@@ -8,6 +8,7 @@ import edu.berkeley.cs186.database.common.Pair;
 import edu.berkeley.cs186.database.databox.DataBox;
 import edu.berkeley.cs186.database.databox.Type;
 import edu.berkeley.cs186.database.io.Page;
+import edu.berkeley.cs186.database.table.Record;
 import edu.berkeley.cs186.database.table.RecordId;
 
 import javax.xml.crypto.Data;
@@ -204,7 +205,27 @@ class LeafNode extends BPlusNode {
     int loadlimit = (int) Math.ceil(metadata.getOrder() * 2 * fillFactor);
     LeafNode rootLeafNode = this;
     LeafNode currentNode = rootLeafNode;
-    while (data.hasNext()) {
+    for (int i = keys.size(); i < loadlimit; i++) {
+      if(data.hasNext()) {
+        Pair<DataBox, RecordId> datapair = data.next();
+        keys.add(datapair.getFirst());
+        rids.add(datapair.getSecond());
+      }
+    }
+    if (data.hasNext()) {
+      overflown = true;
+      List<DataBox> sibkeys = new ArrayList<>();
+      List<RecordId> sibrids = new ArrayList<>();
+      Pair<DataBox, RecordId> datapair = data.next();
+      sibkeys.add(datapair.getFirst());
+      sibrids.add(datapair.getSecond());
+      LeafNode sibLeafNode = new LeafNode(metadata, sibkeys, sibrids, Optional.empty());
+      sibLeafNode.rightSibling = rightSibling;
+      rightSibling = Optional.of(sibLeafNode.getPage().getPageNum());
+      newpair = Optional.of(new Pair<>(sibLeafNode.keys.get(0), sibLeafNode.getPage().getPageNum()));
+    }
+    //below method bulk load all datapairs in data, which might not be the specification.
+    /*while (data.hasNext()) {
       for (int i = 0; i < loadlimit; i++) {
         if (data.hasNext()) {
           Pair<DataBox, RecordId> datapair = data.next();
@@ -223,7 +244,7 @@ class LeafNode extends BPlusNode {
     }
     if (overflown) {
       newpair = Optional.of(new Pair<>(rootLeafNode.keys.get(0), rootLeafNode.getPage().getPageNum()));
-    }
+    }*/
     sync();
     return newpair;
   }

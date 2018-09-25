@@ -116,13 +116,13 @@ class InnerNode extends BPlusNode {
       keys.add(newinnernodeposition, newpair.get().getFirst());
       children.add(newinnernodeposition, newpair.get().getSecond());
       if (keys.size() > metadata.getOrder() * 2 + 1) {
-        List<DataBox> rightinnerkeys = keys.subList(keys.size() - metadata.getOrder(), keys.size());
-        List<Integer> rightinnerchildren = children.subList(keys.size() - metadata.getOrder(), keys.size());
+        List<DataBox> rightinnerkeys = keys.subList(metadata.getOrder() + 1, keys.size());
+        List<Integer> rightinnerchildren = children.subList(metadata.getOrder() + 1, children.size());
         InnerNode rightinnernode = new InnerNode(metadata, rightinnerkeys, rightinnerchildren);
         List<DataBox> upinnerkeys = keys.subList(metadata.getOrder(), metadata.getOrder() + 1);
         List<Integer> upinnerchildren = children.subList(this.page.getPageNum(), rightinnernode.page.getPageNum());
         keys = keys.subList(0, metadata.getOrder());
-        children = children.subList(0, metadata.getOrder());
+        children = children.subList(0, metadata.getOrder() + 1);
         newpair = Optional.of(new Pair<>(upinnerkeys.get(0), rightinnernode.page.getPageNum()));
       }
     }
@@ -138,8 +138,23 @@ class InnerNode extends BPlusNode {
     Optional<Pair<DataBox, Integer>> newpair = Optional.empty();
     while (data.hasNext()) {
       newpair = LeafNode.fromBytes(metadata, children.get(keys.size())).bulkLoad(data, fillFactor);
+      if (keys.size() < metadata.getOrder() * 2) {
+        if (!newpair.equals(Optional.empty())) {
+          keys.add(newpair.get().getFirst());
+          children.add(newpair.get().getSecond());
+        }
+      } else {
+        List<DataBox> rightkeys = keys.subList(metadata.getOrder() + 1, keys.size());
+        List<Integer> rightchildren = children.subList(metadata.getOrder() + 1, children.size());
+        InnerNode rightInnerNode = new InnerNode(metadata, rightkeys, rightchildren);
+        DataBox upNodekey = keys.get(metadata.getOrder());
+        keys = keys.subList(0, metadata.getOrder());
+        children = children.subList(0, metadata.getOrder() + 1);
+        return Optional.of(new Pair<DataBox, Integer>(upNodekey, rightInnerNode.page.getPageNum()));
+      }
     }
-    throw new UnsupportedOperationException("TODO(hw2): implement.");
+    sync();
+    return Optional.empty();
   }
 
   // See BPlusNode.remove.
@@ -155,6 +170,7 @@ class InnerNode extends BPlusNode {
         }
       }
     }
+    sync();
   }
 
   // Helpers ///////////////////////////////////////////////////////////////////
