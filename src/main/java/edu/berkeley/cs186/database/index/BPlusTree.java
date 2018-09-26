@@ -253,8 +253,20 @@ public class BPlusTree {
      *   tree.put(key, rid); // BPlusTreeException :(
      */
     public void put(DataBox key, RecordId rid) throws BPlusTreeException {
+        //Question 4
       typecheck(key);
-      throw new UnsupportedOperationException("TODO(hw2): implement.");
+      Optional<Pair<DataBox, Integer>> returned = root.put(key, rid);
+
+      if (returned.isPresent()) {
+          List<DataBox> newkeys = new ArrayList<>();
+          newkeys.add(returned.get().getFirst());
+          List<Integer> newchildren = new ArrayList<>();
+          newchildren.add(root.getPage().getPageNum());
+          newchildren.add(returned.get().getSecond());
+
+          root = new InnerNode(metadata, newkeys, newchildren);
+          writeHeader(headerPage.getByteBuffer());
+      }
     }
 
     /**
@@ -289,8 +301,9 @@ public class BPlusTree {
      *   tree.get(key); // Optional.empty()
      */
     public void remove(DataBox key) {
+        //Question 4
       typecheck(key);
-      throw new UnsupportedOperationException("TODO(hw2): implement.");
+      root.remove(key);
     }
 
     // Helpers /////////////////////////////////////////////////////////////////
