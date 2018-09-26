@@ -34,7 +34,7 @@ public class TestBPlusTree {
 
     // 10 seconds max per method tested.
     @Rule
-    public TestRule globalTimeout = new DisableOnDebug(Timeout.seconds(10));
+    public TestRule globalTimeout = new DisableOnDebug(Timeout.seconds(60));
 
     // Helpers /////////////////////////////////////////////////////////////////
     @Before

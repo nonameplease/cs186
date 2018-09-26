@@ -181,7 +181,8 @@ class LeafNode extends BPlusNode {
 
       //Check overfill and split if necessary
       if (num > maxnum) {
-          int newindex = maxnum / 2 + 1;
+          //int newindex = maxnum / 2 + 1;
+          int newindex = metadata.getOrder();
           List<DataBox> newkeys = keys.subList(newindex, num);
           List<RecordId> newrids = rids.subList(newindex, num);
           Optional<Integer> currentrightsibling = rightSibling;
@@ -200,11 +201,8 @@ class LeafNode extends BPlusNode {
   public Optional<Pair<DataBox, Integer>> bulkLoad(Iterator<Pair<DataBox, RecordId>> data,
                                                    float fillFactor)
       throws BPlusTreeException {
-    boolean overflown = false;
     Optional<Pair<DataBox, Integer>> newpair = Optional.empty();
     int loadlimit = (int) Math.ceil(metadata.getOrder() * 2 * fillFactor);
-    LeafNode rootLeafNode = this;
-    LeafNode currentNode = rootLeafNode;
     for (int i = keys.size(); i < loadlimit; i++) {
       if(data.hasNext()) {
         Pair<DataBox, RecordId> datapair = data.next();
@@ -213,7 +211,6 @@ class LeafNode extends BPlusNode {
       }
     }
     if (data.hasNext()) {
-      overflown = true;
       List<DataBox> sibkeys = new ArrayList<>();
       List<RecordId> sibrids = new ArrayList<>();
       Pair<DataBox, RecordId> datapair = data.next();
@@ -224,27 +221,6 @@ class LeafNode extends BPlusNode {
       rightSibling = Optional.of(sibLeafNode.getPage().getPageNum());
       newpair = Optional.of(new Pair<>(sibLeafNode.keys.get(0), sibLeafNode.getPage().getPageNum()));
     }
-    //below method bulk load all datapairs in data, which might not be the specification.
-    /*while (data.hasNext()) {
-      for (int i = 0; i < loadlimit; i++) {
-        if (data.hasNext()) {
-          Pair<DataBox, RecordId> datapair = data.next();
-          currentNode.keys.add(datapair.getFirst());
-          currentNode.rids.add(datapair.getSecond());
-        }
-      }
-      if (data.hasNext()) {
-        overflown = true;
-        List<DataBox> silbnewkeys = new ArrayList<>();
-        List<RecordId> silbnewrids = new ArrayList<>();
-        LeafNode silbLeafNode = new LeafNode(metadata, silbnewkeys, silbnewrids, Optional.empty());
-        currentNode.rightSibling = Optional.of(silbLeafNode.getPage().getPageNum());
-        currentNode = silbLeafNode;
-      }
-    }
-    if (overflown) {
-      newpair = Optional.of(new Pair<>(rootLeafNode.keys.get(0), rootLeafNode.getPage().getPageNum()));
-    }*/
     sync();
     return newpair;
   }

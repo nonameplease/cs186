@@ -158,7 +158,6 @@ public class BPlusTree {
     public Optional<RecordId> get(DataBox key) {
         //Question 4
       typecheck(key);
-      Optional<RecordId> returnedID = Optional.empty();
       return root.get(key).getKey(key);
     }
 
@@ -285,7 +284,19 @@ public class BPlusTree {
      * bulkLoad (see comments in BPlusNode.bulkLoad).
      */
     public void bulkLoad(Iterator<Pair<DataBox, RecordId>> data, float fillFactor) throws BPlusTreeException {
-      throw new UnsupportedOperationException("TODO(hw2): implement.");
+        while (data.hasNext()) {
+            Optional<Pair<DataBox, Integer>> returned = root.bulkLoad(data, fillFactor);
+            if (returned.isPresent()) {
+                List<DataBox> newkeys = new ArrayList<>();
+                newkeys.add(returned.get().getFirst());
+                List<Integer> newchildren = new ArrayList<>();
+                newchildren.add(root.getPage().getPageNum());
+                newchildren.add(returned.get().getSecond());
+
+                root = new InnerNode(metadata, newkeys, newchildren);
+                writeHeader(headerPage.getByteBuffer());
+            }
+        }
     }
 
     /**
